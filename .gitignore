@@ -1,0 +1,34 @@
+# Dependency directories
+/node_modules
+/vendor
+
+# Build directories
+/public/build
+/public/hot
+/public/storage
+
+# Laravel storage and keys
+/storage/*.key
+
+# Environment and configuration files
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+.phpactor.json
+Homestead.json
+Homestead.yaml
+auth.json
+
+# Log and error files
+npm-debug.log
+yarn-error.log
+
+# IDE specific files
+/.fleet
+/.idea
+/.vscode
+/.zed
+
+# PHPUnit cache
+/.phpunit.cache
