@@ -3,78 +3,122 @@
 namespace App\Game;
 
 use App\Game\Bots\BotInterface;
-use App\Game\Bots\Brute;
 use App\Game\Data\Constants;
 use App\Game\Services\GameRequestService;
+use App\Game\Logging\LoggerInterface;
 use RuntimeException;
 
 class Game
 {
-    private int $state;
+    private int $status = Constants::GAME_STATE_NOT_INITIALIZED;
+    private array $map = [];
     private GameRequestService $gameRequestService;
     private BotInterface $bot;
+    private LoggerInterface $output;
 
-    public function __construct(GameRequestService $gameRequestService)
+    public function __construct(GameRequestService $gameRequestService, LoggerInterface $output, BotInterface $bot)
     {
         $this->gameRequestService = $gameRequestService;
-        $this->bot = new Brute(); //TODO implement bot selection
-        $this->state = Constants::GAME_STATE_NOT_INITIALIZED;
+        $this->output = $output;
+        $this->bot = $bot;
     }
 
-    public function play()
+    public function play(): void
     {
-        // initialize the game
-        // run main loop
-        // end the game and tidy up
-        throw new RuntimeException('Game: play() is not implemented yet.');
+        $this->initialize();
+        $this->run();
+        $this->end();
     }
 
-    public function endGame(): void
-    {
-        $this->setState(Constants::GAME_STATE_ENDED);
-    }
-
-    public function getState(): int
-    {
-        return $this->state;
-    }
-
-    public function setState(int $state): void
-    {
-        $this->state = $state;
-    }
-
+    // Core Game Flow
     private function initialize(): void
     {
-        throw new RuntimeException('Game: initialize() is not implemented yet.');
+        $config = $this->gameRequestService->init(Constants::GAME_MODE_FRIENDLY_DUEL);
+        $this->syncGameState($config);
+        $this->waitForGameToStart();
     }
 
-    private function run(): int
+    private function waitForGameToStart(): void
+    {
+        $timeout = 300;
+        $pollingInterval = 2;
+        $elapsedTime = 0;
+
+        while ($this->isStarting()) {
+            $this->checkTimeout($elapsedTime, $timeout);
+
+            sleep($pollingInterval);
+            $elapsedTime += $pollingInterval;
+
+            $this->updateGameState();
+
+            $this->output->info("Waiting for matchmaking... ({$elapsedTime}s)");
+        }
+
+        $this->output->info("Game is now in progress.");
+    }
+
+    private function run(): void
     {
         while ($this->inProgress()) {
 
-            if ($this->isPlayerTurn()) {
+            if ($this->bot->isPlayerTurn()) {
                 $this->bot->takeTurn();
             }
 
-            $this->setState($this->gameRequestService->checkState());
+            $this->updateGameState();
         }
     }
 
     private function end(): void
     {
-        throw new RuntimeException('Game: end() is not implemented yet.');
+        $this->output->info("Game ended.");
     }
 
-    private function isPlayerTurn(): bool
-    {
-        // $this->state...
-        return true; // TODO implement this
-    }
-
+    // State Management
     private function inProgress(): bool
     {
-        return $this->state === Constants::GAME_STATE_IN_PROGRESS;
+        return $this->status === Constants::GAME_STATE_IN_PROGRESS;
     }
 
+    private function isStarting(): bool
+    {
+        return $this->status === Constants::GAME_STATE_NOT_INITIALIZED || $this->status === Constants::GAME_STATE_PLAYERS_REGISTERING;
+    }
+
+    private function checkTimeout(int $elapsedTime, int $timeout): void
+    {
+        if ($elapsedTime >= $timeout) {
+            throw new RuntimeException('Matchmaking timeout: game did not start in time.');
+        }
+    }
+
+    // Syncing State
+    private function syncGameState(array $stateData): void
+    {
+        $this->updateState($stateData['state']['status']);
+        $this->updatePlayers($stateData['players']);
+        $this->updateMap($stateData['map']);
+    }
+
+    private function updateState(int $status): void
+    {
+        $this->status = $status;
+    }
+
+    private function updatePlayers(array $players): void
+    {
+        $this->bot->setPlayerState($players['bearer']);
+    }
+
+    private function updateMap(array $map): void
+    {
+        $this->map = $map;
+    }
+
+    private function updateGameState(): void
+    {
+        $updatedState = $this->gameRequestService->checkState();
+        $this->syncGameState($updatedState);
+    }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Game\Bots\Brute;
 use App\Game\Game;
+use App\Game\Logging\ConsoleLogger;
 use App\Game\Services\GameRequestService;
 use Illuminate\Console\Command;
 
@@ -32,9 +34,12 @@ class play extends Command
         try {
             $this->info('Creating GameRequestService...');
             $service = new GameRequestService();
+            $bot = new Brute([], [], false);
 
             $this->info('Creating Game...');
-            $game = new Game($service);
+
+            $logger = new ConsoleLogger($this);
+            $game = new Game($service, $logger, $bot);
 
             $this->info('Playing game...');
             $game->play();
@@ -42,7 +47,6 @@ class play extends Command
             $this->info('Game ended.');
         } catch (\Exception $e) {
             $this->error('An error occurred: ' . $e->getMessage());
-            Log::error('Game error: ' . $e->getMessage());
             return 1;
         }
 

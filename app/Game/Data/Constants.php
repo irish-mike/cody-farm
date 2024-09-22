@@ -28,4 +28,12 @@ class Constants
     const GAME_MODE_COMPETITIVE_6 = 6;
     const GAME_MODE_COMPETITIVE_7 = 7;
 
+
+    // Tiles
+    const TILE_BLANK = 0;
+    const TILE_EXIT = 2;
+    const TILE_ENERGY_REGENERATOR = 4;
+    const TILE_ARMOR_REGENERATOR = 5;
+    const TILE_HITPOINT_REGENERATOR = 6;
+
 }
