@@ -7,5 +7,5 @@ use App\Game\Game;
 
 interface StrategyInterface
 {
-    public function execute(Game $game, BotInterface $bot): array;
+    public function execute(Game $game): array;
 }

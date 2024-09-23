@@ -10,8 +10,6 @@ use App\Game\Strategies\StrategyManager;
 use RuntimeException;
 
 // TODO: Connect to the game api
-
-// TODO: Implement BFS algorithm for finding exit
 // TODO: Review and refactor code
 
 class Game
@@ -43,6 +41,16 @@ class Game
         } finally {
             $this->end();
         }
+    }
+
+    public function getMap(): array
+    {
+        return $this->map;
+    }
+
+    public function getBot(): BotInterface
+    {
+        return $this->bot;
     }
 
     // Core Game Flow
@@ -86,8 +94,8 @@ class Game
         if (!$this->bot->isTurn())
             return;
 
-        $move = $this->strategyManager->getMoveParams($this, $this->bot);
-        $cast = $this->strategyManager->getCastParams($this, $this->bot);
+        $move = $this->strategyManager->getMoveParams($this);
+        $cast = $this->strategyManager->getCastParams($this);
 
         $this->bot->setPosition($move);
 
@@ -101,7 +109,7 @@ class Game
 
     private function end(): void
     {
-        $this->status === Constants::GAME_STATE_ENDED;
+        $this->status = Constants::GAME_STATE_ENDED;
         $this->output->info("Game ended.");
     }
 
@@ -129,6 +137,13 @@ class Game
         $this->updateState($stateData['state']['status']);
         $this->updatePlayers($stateData['players']);
         $this->updateMap($stateData['map']);
+
+        $pos = $this->bot->getPosition();
+        if(!empty($pos)){
+            if($pos['x'] == 0  && $pos['y'] == 6){
+                $this->end();
+            }
+        }
     }
 
     private function updateState(int $status): void

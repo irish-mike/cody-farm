@@ -2,8 +2,6 @@
 
 namespace App\Game\Bots;
 
-use App\Game\Game;
-
 class Bot implements BotInterface
 {
     private array $position = [];
@@ -13,7 +11,10 @@ class Bot implements BotInterface
 
     public function setState(array $player): void
     {
-        $this->position = $player['position'] ?? [];
+        if(empty($this->position)) {
+            $this->position = $player['position'] ?? [];
+        }
+
         $this->possibleMoves = $player['possible_moves'] ?? [];
         $this->skills = $player['skills'] ?? [];
         $this->isPlayerTurn = $player['is_player_turn'] ?? false;

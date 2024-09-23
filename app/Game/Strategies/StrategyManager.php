@@ -16,13 +16,13 @@ class StrategyManager
         $this->castStrategy = new CastStrategy();
     }
 
-    public function getMoveParams(Game $game, BotInterface $bot): array
+    public function getMoveParams(Game $game): array
     {
-        return $this->moveStrategy->execute($game, $bot);
+        return $this->moveStrategy->execute($game);
     }
 
-    public function getCastParams(Game $game, BotInterface $bot): array
+    public function getCastParams(Game $game): array
     {
-        return $this->castStrategy->execute($game, $bot);
+        return $this->castStrategy->execute($game);
     }
 }

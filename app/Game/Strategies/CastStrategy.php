@@ -7,8 +7,9 @@ use App\Game\Game;
 
 class CastStrategy implements StrategyInterface
 {
-    public function execute(Game $game, BotInterface $bot): array
+    public function execute(Game $game): array
     {
+        $bot = $game->getBot();
         if ($bot->hasAvailableTargets()) {
             $availableTargets = $bot->getAvailableTargets();
             $skills = $bot->getSkills();
