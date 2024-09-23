@@ -34,7 +34,7 @@ class play extends Command
         try {
             $this->info('Creating GameRequestService...');
             $service = new GameRequestService();
-            $bot = new Brute([], [], false);
+            $bot = new Brute();
 
             $this->info('Creating Game...');
 

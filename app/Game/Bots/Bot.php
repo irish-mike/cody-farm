@@ -2,48 +2,64 @@
 
 namespace App\Game\Bots;
 
+use App\Game\Game;
+
 class Bot implements BotInterface
 {
-    private array $position;
-    private array $possibleMoves;
-    private bool $isPlayerTurn;
+    private array $position = [];
+    private array $possibleMoves = [];
+    private array $skills = [];
+    private bool $isPlayerTurn = false;
 
-    public function __construct(array $position, array $possibleMoves, bool $isPlayerTurn)
-    {
-        $this->position = $position;
-        $this->possibleMoves = $possibleMoves;
-        $this->isPlayerTurn = $isPlayerTurn;
-    }
-
-    public function setPlayerState(array $player): void
+    public function setState(array $player): void
     {
         $this->position = $player['position'] ?? [];
         $this->possibleMoves = $player['possible_moves'] ?? [];
+        $this->skills = $player['skills'] ?? [];
         $this->isPlayerTurn = $player['is_player_turn'] ?? false;
     }
 
-    public function takeTurn(): void
+    public function getPossibleMoves(): array
     {
-        if (!$this->isPlayerTurn) {
-            throw new RuntimeException('It is not the player’s turn.');
-        }
-
-        $this->castSkill();
-        $this->makeMove();
+        return $this->possibleMoves;
     }
 
-    public function isPlayerTurn(): bool
+    public function getPosition(): array
+    {
+        return $this->position;
+    }
+
+    public function setPosition(array $position): void
+    {
+        $this->position = $position;
+    }
+
+    public function isTurn(): bool
     {
         return $this->isPlayerTurn;
     }
 
-    protected function castSkill(): void
+    public function getSkills(): array
     {
-        throw new RuntimeException('Brute: castSkill() is not implemented yet.');
+        return $this->skills;
     }
 
-    protected function makeMove(): void
+    public function skillReady(array $skill): bool
     {
-        throw new RuntimeException('Brute: makeMove() is not implemented yet.');
+        return $skill['cooldown'] === 0 && !empty($skill['possible_targets']);
+    }
+    public function getAvailableTargets(): ?array
+    {
+        foreach ($this->skills as $skill) {
+            if ($this->skillReady($skill)) {
+                return $skill['possible_targets'];
+            }
+        }
+        return null;
+    }
+
+    public function hasAvailableTargets(): bool
+    {
+        return $this->getAvailableTargets() !== null;
     }
 }
