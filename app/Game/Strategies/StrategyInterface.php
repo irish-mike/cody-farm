@@ -2,7 +2,6 @@
 
 namespace App\Game\Strategies;
 
-use App\Game\Bots\BotInterface;
 use App\Game\Game;
 
 interface StrategyInterface
