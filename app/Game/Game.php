@@ -4,13 +4,11 @@ namespace App\Game;
 
 use App\Game\Bots\BotInterface;
 use App\Game\Data\Constants;
-use App\Game\Services\GameRequestService;
 use App\Game\Logging\LoggerInterface;
+use App\Game\Services\GameRequestService;
 use App\Game\Strategies\StrategyManager;
+use Illuminate\Support\Facades\Config;
 use RuntimeException;
-
-// TODO: Connect to the game api
-// TODO: Review and refactor code
 
 class Game
 {
@@ -18,26 +16,29 @@ class Game
     private array $map = [];
     private GameRequestService $gameRequestService;
     private BotInterface $bot;
-    private LoggerInterface $output;
-
+    private LoggerInterface $log;
     private StrategyManager $strategyManager;
 
-    public function __construct(GameRequestService $gameRequestService, LoggerInterface $output, BotInterface $bot)
-    {
+    public function __construct(
+        LoggerInterface $log,
+        GameRequestService $gameRequestService,
+        BotInterface $bot,
+    ) {
         $this->gameRequestService = $gameRequestService;
-        $this->output = $output;
+        $this->log = $log;
         $this->bot = $bot;
 
+        // This may be better moved to the bot class
         $this->strategyManager = new StrategyManager();
     }
 
     public function play(): void
     {
-        try{
+        try {
             $this->initialize();
             $this->run();
         } catch (RuntimeException $e) {
-            $this->output->error($e->getMessage());
+            $this->log->error('An error occurred during the game: ' . $e->getMessage());
         } finally {
             $this->end();
         }
@@ -45,6 +46,7 @@ class Game
 
     public function getMap(): array
     {
+        // TODO - This should be encapsulated in a Map class
         return $this->map;
     }
 
@@ -53,67 +55,61 @@ class Game
         return $this->bot;
     }
 
-    // Core Game Flow
     private function initialize(): void
     {
-        $config = $this->gameRequestService->init(Constants::GAME_MODE_FRIENDLY_DUEL);
-        $this->syncGameState($config);
         $this->waitForGameToStart();
     }
 
     private function waitForGameToStart(): void
     {
-        $timeout = 300;
-        $pollingInterval = 2;
+        $timeout = Config::get('services.game.matchmaking_timeout', 300);
+        $pollingInterval = Config::get('services.game.polling_interval', 2);
         $elapsedTime = 0;
 
         while ($this->isStarting()) {
-            $this->checkTimeout($elapsedTime, $timeout);
-
-            sleep($pollingInterval);
-            $elapsedTime += $pollingInterval;
-
             $this->updateGameState();
+            $elapsedTime += $pollingInterval;
+            $this->checkTimeout($elapsedTime, $timeout);
+            sleep($pollingInterval);
 
-            $this->output->info("Waiting for matchmaking... ({$elapsedTime}s)");
+            $this->log->info("Waiting for matchmaking... ({$elapsedTime}s)");
         }
 
-        $this->output->info("Game is now in progress.");
+        $this->log->info("Game is now in progress.");
     }
 
     private function run(): void
     {
+        $pollingInterval = Config::get('services.game.polling_interval', 2);
+
         while ($this->inProgress()) {
             $this->handleTakeTurn();
             $this->updateGameState();
+            sleep($pollingInterval);
         }
     }
 
     private function handleTakeTurn(): void
     {
-        if (!$this->bot->isTurn())
+        if (!$this->bot->isTurn()) {
             return;
-
-        $move = $this->strategyManager->getMoveParams($this);
-        $cast = $this->strategyManager->getCastParams($this);
-
-        $this->bot->setPosition($move);
-
-        if(!empty($cast)) {
-            $this->gameRequestService->castSkill($cast['skill_id'], $cast['x'], $cast['y']);
         }
 
-        $this->gameRequestService->move($move['x'], $move['y']);
+        if ($move = $this->strategyManager->getMoveParams($this)) {
+            $this->gameRequestService->move($move['x'], $move['y']);
+        }
 
+        if ($cast = $this->strategyManager->getCastParams($this)) {
+            $this->gameRequestService->castSkill($cast['skill_id'], $cast['x'], $cast['y']);
+        }
     }
 
     private function end(): void
     {
         $this->status = Constants::GAME_STATE_ENDED;
-        $this->output->info("Game ended.");
+        $this->log->info("Game ended.");
     }
 
-    // State Management
     private function inProgress(): bool
     {
         return $this->status === Constants::GAME_STATE_IN_PROGRESS;
@@ -121,7 +117,7 @@ class Game
 
     private function isStarting(): bool
     {
-        return $this->status === Constants::GAME_STATE_NOT_INITIALIZED || $this->status === Constants::GAME_STATE_PLAYERS_REGISTERING;
+        return $this->status === Constants::GAME_STATE_NOT_INITIALIZED;
     }
 
     private function checkTimeout(int $elapsedTime, int $timeout): void
@@ -131,19 +127,11 @@ class Game
         }
     }
 
-    // Syncing State
     private function syncGameState(array $stateData): void
     {
         $this->updateState($stateData['state']['status']);
         $this->updatePlayers($stateData['players']);
         $this->updateMap($stateData['map']);
-
-        $pos = $this->bot->getPosition();
-        if(!empty($pos)){
-            if($pos['x'] == 0  && $pos['y'] == 6){
-                $this->end();
-            }
-        }
     }
 
     private function updateState(int $status): void

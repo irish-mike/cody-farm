@@ -2,22 +2,49 @@
 
 namespace App\Game\Bots;
 
+use App\Game\Models\Position;
+use App\Game\Models\Skill;
+use App\Game\Models\Stats;
+
 class Bot implements BotInterface
 {
-    private array $position = [];
-    private array $possibleMoves = [];
+    private Position $position;
     private array $skills = [];
+    private Stats $stats;
+
+    private array $possibleMoves = [];
     private bool $isPlayerTurn = false;
 
     public function setState(array $player): void
     {
-        if(empty($this->position)) {
-            $this->position = $player['position'] ?? [];
-        }
-
+        $this->setPosition($player);
+        $this->setSkills($player);
+        $this->setStats($player);
         $this->possibleMoves = $player['possible_moves'] ?? [];
-        $this->skills = $player['skills'] ?? [];
         $this->isPlayerTurn = $player['is_player_turn'] ?? false;
+    }
+
+    private function setPosition(array $player): void
+    {
+        if (isset($player['position'])) {
+            $positionData = $player['position'];
+            $this->position = new Position($positionData['x'], $positionData['y']);
+        }
+    }
+
+    private function setSkills(array $player): void
+    {
+        $this->skills = [];
+        if (isset($player['skills'])) {
+            foreach ($player['skills'] as $skillData) {
+                $this->skills[] = new Skill($skillData);
+            }
+        }
+    }
+
+    private function setStats(array $player): void
+    {
+        $this->stats = new Stats($player['stats'] ?? []);
     }
 
     public function getPossibleMoves(): array
@@ -25,14 +52,9 @@ class Bot implements BotInterface
         return $this->possibleMoves;
     }
 
-    public function getPosition(): array
+    public function getPosition(): Position
     {
         return $this->position;
-    }
-
-    public function setPosition(array $position): void
-    {
-        $this->position = $position;
     }
 
     public function isTurn(): bool
@@ -45,22 +67,8 @@ class Bot implements BotInterface
         return $this->skills;
     }
 
-    public function skillReady(array $skill): bool
+    public function getStats(): Stats
     {
-        return $skill['cooldown'] === 0 && !empty($skill['possible_targets']);
-    }
-    public function getAvailableTargets(): ?array
-    {
-        foreach ($this->skills as $skill) {
-            if ($this->skillReady($skill)) {
-                return $skill['possible_targets'];
-            }
-        }
-        return null;
-    }
-
-    public function hasAvailableTargets(): bool
-    {
-        return $this->getAvailableTargets() !== null;
+        return $this->stats;
     }
 }

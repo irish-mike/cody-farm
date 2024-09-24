@@ -9,6 +9,7 @@ class Tile
     private int $x;
     private int $y;
 
+    // TODO - refactor to use position object
     public function __construct($x = 0, $y = 0, $type = Constants::TILE_BLANK)
     {
         $this->x = $x;
